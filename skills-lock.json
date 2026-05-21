@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "skills": {
+    "arize-ai-provider-integration": {
+      "source": "Arize-ai/arize-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arize-ai-provider-integration/SKILL.md",
+      "computedHash": "53e2e94060d6a550bdfede60fc784f39c02245d90c21724410e3d11e3f2c4939"
+    },
+    "arize-annotation": {
+      "source": "Arize-ai/arize-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arize-annotation/SKILL.md",
+      "computedHash": "5f1d27e8ad47fb0afb9f4dea423874d01ca6caced556c51658b67363d9d46281"
+    },
+    "arize-compliance-audit": {
+      "source": "Arize-ai/arize-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arize-compliance-audit/SKILL.md",
+      "computedHash": "fca21058fdd778f4c7bb5a8ade87588f6b4baf3b7e5bb74e1a4c737c3a6d2504"
+    },
+    "arize-dataset": {
+      "source": "Arize-ai/arize-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arize-dataset/SKILL.md",
+      "computedHash": "9fcc6f39797bce4a86239a73d0e600e617e146ac5573cb48ae6f3873d54b233f"
+    },
+    "arize-evaluator": {
+      "source": "Arize-ai/arize-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arize-evaluator/SKILL.md",
+      "computedHash": "ca5cda8a35446dd00c57e0de1b62962bc715f37a541a198c4de16202ad3a216d"
+    },
+    "arize-experiment": {
+      "source": "Arize-ai/arize-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arize-experiment/SKILL.md",
+      "computedHash": "33a3253350f908707ea1a2b1f6afbf5da89e2566cd5b024a5295733064e69510"
+    },
+    "arize-instrumentation": {
+      "source": "Arize-ai/arize-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arize-instrumentation/SKILL.md",
+      "computedHash": "c142a15d5c1efb323fe9943f204ad7aaefcc97f227cc7323df5b303ced48aaa1"
+    },
+    "arize-link": {
+      "source": "Arize-ai/arize-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arize-link/SKILL.md",
+      "computedHash": "a02b79f9dede402c253aa52e1543d3be537fa16edde0df8df93d6fd1892b9504"
+    },
+    "arize-prompt-optimization": {
+      "source": "Arize-ai/arize-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arize-prompt-optimization/SKILL.md",
+      "computedHash": "823af48c1666885b2768b6a18530f0dd4e344cc37e37a850c338acbe58ecfa37"
+    },
+    "arize-trace": {
+      "source": "Arize-ai/arize-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arize-trace/SKILL.md",
+      "computedHash": "b7f9aeffc35d23c5dcce52307bf122a30818fd97e343b74fb4eb3f8c8ac9a2ce"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "braintrust": "^3.11.0",
+    "evals": "^2.2.8"
+  }
+}

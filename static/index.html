@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grocery Nutrition Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0c1a0e;
+      --surface: #152018;
+      --surface-2: #1e2d21;
+      --surface-3: #253228;
+      --border: #2a3d2d;
+      --accent: #7dba5a;
+      --accent-dim: #4d7a38;
+      --text: #d8ebd9;
+      --text-muted: #7a9b7d;
+      --more-of: #5bba72;
+      --more-of-bg: rgba(91,186,114,0.10);
+      --moderation: #e0a030;
+      --moderation-bg: rgba(224,160,48,0.10);
+      --less-of: #e05555;
+      --less-of-bg: rgba(224,85,85,0.10);
+      --user-bubble: #1e3422;
+      --radius: 14px;
+      --drawer-width: 320px;
+      --font-body: 'DM Sans', sans-serif;
+      --font-display: 'Lora', serif;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.6; overflow: hidden; }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ── */
+    .shell {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      height: 100vh;
+    }
+
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      transition: margin-right 0.3s ease;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .logo { font-size: 20px; }
+
+    .header-text h1 {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .header-text p { font-size: 0.75rem; color: var(--text-muted); font-weight: 300; }
+
+    .header-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .mode-btn {
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 0.78rem;
+      font-family: var(--font-body);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .mode-btn.active { background: var(--surface-3); color: var(--text); }
+
+    /* Profile button */
+    .profile-btn {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s, color 0.15s;
+      font-size: 15px;
+    }
+
+    .profile-btn:hover, .profile-btn.active { border-color: var(--accent-dim); color: var(--accent); }
+
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+    /* ── Messages ── */
+    .messages {
+      flex: 1; overflow-y: auto; padding: 24px;
+      display: flex; flex-direction: column; gap: 20px;
+      scroll-behavior: smooth;
+    }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Empty state */
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 12px; text-align: center;
+      padding: 40px 20px; animation: fadeIn 0.5s ease;
+    }
+    .empty-icon { font-size: 2.2rem; margin-bottom: 4px; }
+    .empty-state h2 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; }
+    .empty-state p { color: var(--text-muted); font-size: 0.86rem; font-weight: 300; max-width: 340px; line-height: 1.7; }
+    .example-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 4px; }
+    .chip { font-size: 0.73rem; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 11px; }
+
+    /* Messages */
+    .message { display: flex; flex-direction: column; gap: 4px; animation: slideUp 0.3s ease; }
+    .message.user { align-items: flex-end; }
+    .message.agent { align-items: flex-start; }
+
+    @keyframes slideUp { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn  { from{opacity:0}to{opacity:1} }
+
+    .user-bubble {
+      max-width: 80%;
+      background: var(--user-bubble);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      border-bottom-right-radius: 4px;
+      padding: 11px 15px;
+      font-size: 0.88rem;
+      word-break: break-all;
+      color: var(--text-muted);
+    }
+
+    /* ── Structured recommendation card ── */
+    .rec-wrap {
+      max-width: 92%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      border-bottom-left-radius: 4px;
+      overflow: hidden;
+    }
+
+    .rec-header {
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rec-category-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 20px;
+      margin-bottom: 8px;
+    }
+
+    .badge-MORE_OF  { background: var(--more-of-bg);    color: var(--more-of);   border: 1px solid rgba(91,186,114,0.3); }
+    .badge-IN_MODERATION { background: var(--moderation-bg); color: var(--moderation); border: 1px solid rgba(224,160,48,0.3); }
+    .badge-LESS_OF  { background: var(--less-of-bg);   color: var(--less-of);  border: 1px solid rgba(224,85,85,0.3); }
+
+    .rec-headline {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .rec-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 14px; }
+
+    .rec-section-title {
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .rec-rationale { font-size: 0.88rem; line-height: 1.7; font-weight: 300; color: var(--text); }
+
+    /* Evidence list */
+    .evidence-list { display: flex; flex-direction: column; gap: 6px; }
+    .evidence-item {
+      font-size: 0.82rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 11px;
+      display: flex; gap: 8px; align-items: flex-start;
+    }
+    .evidence-item .ev-claim { flex: 1; line-height: 1.5; }
+    .evidence-item .ev-source {
+      font-size: 0.7rem; color: var(--text-muted);
+      background: var(--surface-3);
+      border-radius: 4px;
+      padding: 2px 6px;
+      white-space: nowrap;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    /* Personal fit chips */
+    .fit-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .fit-chip {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid;
+    }
+    .fit-chip.conflict  { color: var(--less-of);   background: var(--less-of-bg);   border-color: rgba(224,85,85,0.3); }
+    .fit-chip.warning   { color: var(--moderation); background: var(--moderation-bg); border-color: rgba(224,160,48,0.3); }
+    .fit-chip.goal-high { color: var(--more-of);   background: var(--more-of-bg);   border-color: rgba(91,186,114,0.3); }
+    .fit-chip.goal-mid  { color: var(--moderation); background: var(--moderation-bg); border-color: rgba(224,160,48,0.3); }
+    .fit-chip.goal-low  { color: var(--less-of);   background: var(--less-of-bg);   border-color: rgba(224,85,85,0.3); }
+
+    /* Alternatives */
+    .alt-list { display: flex; flex-direction: column; gap: 6px; }
+    .alt-item {
+      font-size: 0.82rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+    .alt-name { font-weight: 500; margin-bottom: 2px; }
+    .alt-why  { color: var(--text-muted); font-weight: 300; font-size: 0.79rem; }
+
+    /* Trace link */
+    .trace-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.72rem; color: var(--text-muted);
+      text-decoration: none; padding: 4px 0;
+    }
+    .trace-link:hover { color: var(--accent); }
+
+    .meta { font-size: 0.72rem; color: var(--text-muted); }
+
+    /* Typing indicator */
+    .typing-bubble {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); border-bottom-left-radius: 4px;
+      padding: 12px 16px;
+      animation: slideUp 0.3s ease;
+    }
+    .typing-label { font-size: 0.78rem; color: var(--text-muted); font-style: italic; }
+    .dots { display: flex; gap: 4px; align-items: center; }
+    .dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: bounce 1.2s ease-in-out infinite; }
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0);opacity:0.6}30%{transform:translateY(-5px);opacity:1} }
+
+    /* Cart comparison grid */
+    .cart-summary-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 18px;
+      animation: slideUp 0.3s ease; max-width: 92%;
+    }
+    .cart-score-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .cart-score-badge {
+      font-size: 1.2rem; font-weight: 600; font-family: var(--font-display);
+    }
+    .score-bar { flex: 1; height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+    .score-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+    .cart-summary-text { font-size: 0.86rem; line-height: 1.7; color: var(--text); margin-bottom: 10px; }
+    .swap-list { display: flex; flex-direction: column; gap: 6px; }
+    .swap-item {
+      font-size: 0.81rem; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px;
+    }
+    .swap-replace { color: var(--less-of); font-weight: 500; }
+    .swap-arrow { color: var(--text-muted); margin: 0 4px; }
+    .swap-with { color: var(--more-of); font-weight: 500; }
+    .swap-reason { color: var(--text-muted); font-size: 0.78rem; margin-top: 2px; }
+
+    /* Error */
+    .error-bubble {
+      max-width: 88%;
+      background: rgba(224,85,85,0.10);
+      border: 1px solid rgba(224,85,85,0.3);
+      color: #f08080;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.84rem;
+      animation: slideUp 0.3s ease;
+    }
+
+    /* ── Input area ── */
+    .input-area {
+      padding: 14px 24px 20px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .input-row {
+      display: flex; gap: 10px; align-items: flex-end;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 12px;
+      transition: border-color 0.2s;
+    }
+    .input-row:focus-within { border-color: var(--accent-dim); }
+
+    #url-input {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--text); font-family: var(--font-body); font-size: 0.88rem;
+      font-weight: 300; line-height: 1.5; resize: none;
+      min-height: 24px; max-height: 120px;
+    }
+    #url-input::placeholder { color: var(--text-muted); }
+
+    #send-btn {
+      flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px;
+      background: var(--accent); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, transform 0.12s;
+      align-self: flex-end;
+    }
+    #send-btn:hover:not(:disabled) { background: #8dcf68; transform: scale(1.05); }
+    #send-btn:active:not(:disabled) { transform: scale(0.97); }
+    #send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .input-hint { margin-top: 7px; font-size: 0.71rem; color: var(--text-muted); text-align: center; }
+
+    /* ── Profile Drawer ── */
+    .drawer-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 10; opacity: 0; pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .drawer-overlay.open { opacity: 1; pointer-events: all; }
+
+    .drawer {
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: var(--drawer-width);
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      z-index: 11;
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+    }
+    .drawer.open { transform: translateX(0); }
+
+    .drawer-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .drawer-title { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; }
+    .drawer-close {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+    }
+    .drawer-close:hover { border-color: var(--accent-dim); color: var(--text); }
+
+    .drawer-body { flex: 1; overflow-y: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 20px; }
+    .drawer-body::-webkit-scrollbar { width: 4px; }
+    .drawer-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .drawer-section-title {
+      font-size: 0.68rem; font-weight: 500; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
+    }
+
+    .checkbox-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cb-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.79rem; cursor: pointer;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 4px 10px;
+      transition: border-color 0.15s;
+    }
+    .cb-label:hover { border-color: var(--accent-dim); }
+    .cb-label input { display: none; }
+    .cb-label.checked { border-color: var(--accent-dim); color: var(--accent); }
+
+    .drawer-input {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px; color: var(--text);
+      font-family: var(--font-body); font-size: 0.84rem; outline: none;
+      transition: border-color 0.15s;
+    }
+    .drawer-input:focus { border-color: var(--accent-dim); }
+    .drawer-input::placeholder { color: var(--text-muted); }
+
+    .number-input-row { display: flex; gap: 8px; align-items: center; }
+    .number-input-row label { font-size: 0.8rem; color: var(--text-muted); flex: 1; }
+    .drawer-input-sm {
+      width: 80px; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px 10px; color: var(--text);
+      font-family: var(--font-body); font-size: 0.82rem; outline: none;
+      transition: border-color 0.15s; text-align: right;
+    }
+    .drawer-input-sm:focus { border-color: var(--accent-dim); }
+
+    .radio-grid { display: flex; flex-direction: column; gap: 6px; }
+    .radio-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.8rem; cursor: pointer; padding: 6px 10px;
+      border-radius: 8px; border: 1px solid transparent;
+      transition: border-color 0.15s;
+    }
+    .radio-label:hover { border-color: var(--border); }
+    .radio-label input { accent-color: var(--accent); }
+
+    .drawer-footer { padding: 14px 20px; border-top: 1px solid var(--border); }
+    .save-btn {
+      width: 100%; background: var(--accent); border: none; border-radius: 8px;
+      padding: 10px; color: #0c1a0e; font-family: var(--font-body); font-weight: 500;
+      font-size: 0.86rem; cursor: pointer; transition: background 0.15s;
+    }
+    .save-btn:hover { background: #8dcf68; }
+    .profile-indicator {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 0.7rem; color: var(--accent); margin-top: 6px; justify-content: center;
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <!-- Main chat area -->
+  <div class="main" id="main">
+    <header>
+      <div class="logo">🌿</div>
+      <div class="header-text">
+        <h1>Grocery Nutrition Agent</h1>
+        <p>Nutritionist-grade analysis · Claude claude-sonnet-4-6</p>
+      </div>
+      <div class="header-actions">
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="btn-single" onclick="setMode('single')">Single Item</button>
+          <button class="mode-btn" id="btn-cart" onclick="setMode('cart')">Cart</button>
+        </div>
+        <button class="profile-btn" id="profile-btn" title="Profile settings" onclick="toggleDrawer()">⚙</button>
+        <div class="status-dot" title="Online"></div>
+      </div>
+    </header>
+
+    <div class="messages" id="messages">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">🛒</div>
+        <h2>What's in your cart?</h2>
+        <p>Paste a grocery product URL to get a structured nutritionist recommendation with evidence, personal fit, and alternatives.</p>
+        <div class="example-chips">
+          <span class="chip">✅ MORE OF</span>
+          <span class="chip">⚠️ IN MODERATION</span>
+          <span class="chip">❌ LESS OF</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <textarea id="url-input" rows="1" placeholder="Paste a grocery product URL…" autocomplete="off" spellcheck="false"></textarea>
+        <button id="send-btn" aria-label="Analyze" onclick="submit()">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+            <path d="M8 2L14 8L8 14" stroke="#0c1a0e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 8H14" stroke="#0c1a0e" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <p class="input-hint" id="input-hint">Whole Foods · Target · Walmart · Albertsons and more</p>
+    </div>
+  </div>
+
+  <!-- Profile drawer overlay -->
+  <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+
+  <!-- Profile drawer -->
+  <div class="drawer" id="drawer">
+    <div class="drawer-header">
+      <span class="drawer-title">Your Profile</span>
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div>
+        <div class="drawer-section-title">Dietary Restrictions</div>
+        <div class="checkbox-grid" id="restrictions-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <div>
+        <div class="drawer-section-title">Allergens to Avoid</div>
+        <input type="text" class="drawer-input" id="allergens-input"
+          placeholder="e.g. sesame, shellfish, peanuts"
+          title="Comma-separated list of allergens" />
+      </div>
+      <div>
+        <div class="drawer-section-title">Health Goals</div>
+        <div class="checkbox-grid" id="goals-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <div>
+        <div class="drawer-section-title">Daily Targets (optional)</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="number-input-row">
+            <label for="sodium-input">Sodium (mg/day)</label>
+            <input type="number" class="drawer-input-sm" id="sodium-input" placeholder="2300" min="0" max="9999" />
+          </div>
+          <div class="number-input-row">
+            <label for="sugar-input">Added sugar (g/day)</label>
+            <input type="number" class="drawer-input-sm" id="sugar-input" placeholder="50" min="0" max="999" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-footer">
+      <button class="save-btn" onclick="saveProfile()">Save Profile</button>
+      <div class="profile-indicator" id="profile-indicator" style="display:none">
+        ● Profile active
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// Constants & state
+// ─────────────────────────────────────────────
+const DIETARY_OPTIONS = [
+  {value:'vegan',label:'Vegan'},
+  {value:'vegetarian',label:'Vegetarian'},
+  {value:'gluten_free',label:'Gluten-Free'},
+  {value:'dairy_free',label:'Dairy-Free'},
+  {value:'nut_free',label:'Nut-Free'},
+  {value:'keto',label:'Keto'},
+  {value:'paleo',label:'Paleo'},
+  {value:'halal',label:'Halal'},
+  {value:'kosher',label:'Kosher'},
+  {value:'low_fodmap',label:'Low-FODMAP'},
+];
+
+const GOAL_OPTIONS = [
+  {value:'weight_loss',label:'Weight Loss'},
+  {value:'heart_health',label:'Heart Health'},
+  {value:'muscle_gain',label:'Muscle Gain'},
+  {value:'low_sugar',label:'Low Sugar'},
+  {value:'high_fiber',label:'High Fiber'},
+  {value:'low_sodium',label:'Low Sodium'},
+  {value:'energy',label:'Energy'},
+];
+
+const CAT_LABELS = { MORE_OF:'MORE OF', IN_MODERATION:'IN MODERATION', LESS_OF:'LESS OF' };
+const CAT_EMOJI  = { MORE_OF:'✅', IN_MODERATION:'⚠️', LESS_OF:'❌' };
+
+let mode = 'single';
+let profile = loadProfile();
+
+// ─────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  buildDrawer();
+  restoreDrawerState();
+  updateProfileIndicator();
+
+  const input = document.getElementById('url-input');
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+  });
+});
+
+// ─────────────────────────────────────────────
+// Mode
+// ─────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-single').classList.toggle('active', m === 'single');
+  document.getElementById('btn-cart').classList.toggle('active', m === 'cart');
+  const hint = document.getElementById('input-hint');
+  const input = document.getElementById('url-input');
+  if (m === 'cart') {
+    hint.textContent = 'Paste multiple URLs separated by commas';
+    input.placeholder = 'url1, url2, url3…';
+  } else {
+    hint.textContent = 'Whole Foods · Target · Walmart · Albertsons and more';
+    input.placeholder = 'Paste a grocery product URL…';
+    input.rows = 1;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Submit
+// ─────────────────────────────────────────────
+async function submit() {
+  const input = document.getElementById('url-input');
+  const raw = input.value.trim();
+  if (!raw || document.getElementById('send-btn').disabled) return;
+
+  if (mode === 'single') {
+    await submitSingle(raw);
+  } else {
+    const urls = raw.split(',').map(u => u.trim()).filter(Boolean);
+    if (urls.length === 0) return;
+    await submitCart(urls);
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+  if (mode === 'cart') input.rows = 1;
+}
+
+async function submitSingle(url) {
+  addUserMessage(url);
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+  const typing = addTyping();
+
+  try {
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ url, profile: buildProfilePayload() }),
+    });
+    typing.remove();
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      addError(err.detail || "I don't know, an error occurred");
+    } else {
+      const rec = await res.json();
+      addRecommendation(rec);
+    }
+    } catch (e) {
+    typing.remove();
+    addError("I don't know, an error occurred");
+  } finally {
+    btn.disabled = false;
+    input.focus();
+  }
+}
+
+async function submitCart(urls) {
+  addUserMessage(urls.join('\n'));
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+  const typing = addTyping('Analyzing cart…');
+
+  try {
+    const res = await fetch('/cart', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ urls, profile: buildProfilePayload() }),
+    });
+    typing.remove();
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      addError(err.detail || "I don't know, an error occurred");
+    } else {
+      const cart = await res.json();
+      addCartResult(cart);
+    }
+  } catch (e) {
+    typing.remove();
+    addError("I don't know, an error occurred");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Message builders
+// ─────────────────────────────────────────────
+function hideEmpty() {
+  const e = document.getElementById('empty-state');
+  if (e) e.style.display = 'none';
+}
+
+function scrollBottom() {
+  const m = document.getElementById('messages');
+  m.scrollTop = m.scrollHeight;
+}
+
+function addUserMessage(text) {
+  hideEmpty();
+  const wrap = el('div', 'message user');
+  const bubble = el('div', 'user-bubble');
+  bubble.textContent = text;
+  const meta = el('div', 'meta');
+  meta.textContent = 'You';
+  wrap.append(bubble, meta);
+  document.getElementById('messages').appendChild(wrap);
+  scrollBottom();
+}
+
+function addTyping(label = 'Analyzing') {
+  hideEmpty();
+  const wrap = el('div', 'message agent');
+  const bubble = el('div', 'typing-bubble');
+  bubble.innerHTML = `<span class="typing-label">${label}</span><div class="dots"><span></span><span></span><span></span></div>`;
+  wrap.appendChild(bubble);
+  document.getElementById('messages').appendChild(wrap);
+  scrollBottom();
+  return wrap;
+}
+
+function addError(msg) {
+  hideEmpty();
+  const wrap = el('div', 'message agent');
+  const bubble = el('div', 'error-bubble');
+  bubble.textContent = '⚠ ' + msg;
+  wrap.appendChild(bubble);
+  document.getElementById('messages').appendChild(wrap);
+  scrollBottom();
+}
+
+function addRecommendation(rec) {
+  hideEmpty();
+  const wrap = el('div', 'message agent');
+  wrap.appendChild(buildRecCard(rec));
+  const meta = el('div', 'meta');
+  meta.style.marginTop = '4px';
+  if (rec.request_id) {
+    const link = el('a', 'trace-link');
+    link.href = `/trace/${rec.request_id}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.innerHTML = `<span>🔍</span> View trace`;
+    // Resolve real URL on click
+    link.addEventListener('click', async e => {
+      e.preventDefault();
+      const r = await fetch(`/trace/${rec.request_id}`).then(x=>x.json()).catch(()=>({}));
+      if (r.trace_url) window.open(r.trace_url, '_blank');
+    });
+    meta.appendChild(link);
+  }
+  wrap.appendChild(meta);
+  document.getElementById('messages').appendChild(wrap);
+  scrollBottom();
+}
+
+function buildRecCard(rec) {
+  const cat = rec.category || 'IN_MODERATION';
+  const card = el('div', 'rec-wrap');
+
+  // Header
+  const header = el('div', 'rec-header');
+  const badge = el('div', `rec-category-badge badge-${cat}`);
+  badge.textContent = `${CAT_EMOJI[cat] || ''} ${CAT_LABELS[cat] || cat}`;
+  const headline = el('div', 'rec-headline');
+  // Strip leading emoji + category prefix from headline to avoid duplication
+  headline.textContent = (rec.headline || '').replace(/^[✅⚠❌]\s*(MORE OF|IN MODERATION|LESS OF):\s*/i, '').replace(/^\*\*[^*]+\*\*\s*/, '').trim() || rec.headline;
+  header.append(badge, headline);
+  card.appendChild(header);
+
+  // Body
+  const body = el('div', 'rec-body');
+
+  // Rationale
+  if (rec.rationale) {
+    const sec = el('div');
+    const t = el('div', 'rec-section-title'); t.textContent = 'Why';
+    const p = el('div', 'rec-rationale'); p.textContent = rec.rationale;
+    sec.append(t, p);
+    body.appendChild(sec);
+  }
+
+  // Evidence
+  if (rec.evidence && rec.evidence.length > 0) {
+    const sec = el('div');
+    const t = el('div', 'rec-section-title'); t.textContent = 'Evidence';
+    const list = el('div', 'evidence-list');
+    rec.evidence.forEach(ev => {
+      const item = el('div', 'evidence-item');
+      const claim = el('span', 'ev-claim'); claim.textContent = ev.claim;
+      const src = el('span', 'ev-source'); src.textContent = ev.source;
+      item.append(claim, src);
+      list.appendChild(item);
+    });
+    sec.append(t, list);
+    body.appendChild(sec);
+  }
+
+  // Personal fit
+  const fit = rec.personal_fit;
+  if (fit && (fit.dietary_conflicts?.length || fit.allergen_warnings?.length || Object.keys(fit.goal_alignment||{}).length)) {
+    const sec = el('div');
+    const t = el('div', 'rec-section-title'); t.textContent = 'Personal Fit';
+    const grid = el('div', 'fit-grid');
+    (fit.dietary_conflicts || []).forEach(c => {
+      const chip = el('span', 'fit-chip conflict');
+      chip.textContent = `⛔ ${c.restriction}: ${c.ingredient}`;
+      chip.title = c.reason;
+      grid.appendChild(chip);
+    });
+    (fit.allergen_warnings || []).forEach(w => {
+      const chip = el('span', 'fit-chip warning');
+      chip.textContent = `⚠ Allergen: ${w.allergen}`;
+      chip.title = `Found in: ${w.found_in}`;
+      grid.appendChild(chip);
+    });
+    Object.entries(fit.goal_alignment || {}).forEach(([goal, score]) => {
+      const cls = score >= 70 ? 'goal-high' : score >= 40 ? 'goal-mid' : 'goal-low';
+      const chip = el('span', `fit-chip ${cls}`);
+      chip.textContent = `${goalLabel(goal)} ${score}%`;
+      grid.appendChild(chip);
+    });
+    if (fit.overall_fit_score !== undefined) {
+      const chip = el('span', `fit-chip ${fit.overall_fit_score >= 70 ? 'goal-high' : fit.overall_fit_score >= 40 ? 'goal-mid' : 'goal-low'}`);
+      chip.textContent = `Overall fit: ${fit.overall_fit_score}%`;
+      grid.appendChild(chip);
+    }
+    sec.append(t, grid);
+    body.appendChild(sec);
+  }
+
+  // Alternatives
+  if (rec.alternatives && rec.alternatives.length > 0) {
+    const sec = el('div');
+    const t = el('div', 'rec-section-title'); t.textContent = 'Alternatives';
+    const list = el('div', 'alt-list');
+    rec.alternatives.forEach(alt => {
+      const item = el('div', 'alt-item');
+      const name = el('div', 'alt-name'); name.textContent = alt.name;
+      const why = el('div', 'alt-why'); why.textContent = alt.why;
+      item.append(name, why);
+      list.appendChild(item);
+    });
+    sec.append(t, list);
+    body.appendChild(sec);
+  }
+
+  card.appendChild(body);
+  return card;
+}
+
+function addCartResult(cart) {
+  hideEmpty();
+
+  // Per-item recommendations
+  (cart.per_item || []).forEach(rec => addRecommendation(rec));
+
+  // Cart summary card
+  const wrap = el('div', 'message agent');
+  const card = el('div', 'cart-summary-card');
+
+  const scoreRow = el('div', 'cart-score-row');
+  const scoreBadge = el('div', 'cart-score-badge');
+  scoreBadge.textContent = `Cart score: ${cart.cart_balance_score}/100`;
+  const bar = el('div', 'score-bar');
+  const fill = el('div', 'score-fill');
+  const score = cart.cart_balance_score || 0;
+  fill.style.width = score + '%';
+  fill.style.background = score >= 70 ? 'var(--more-of)' : score >= 40 ? 'var(--moderation)' : 'var(--less-of)';
+  bar.appendChild(fill);
+  scoreRow.append(scoreBadge, bar);
+  card.appendChild(scoreRow);
+
+  if (cart.cart_summary) {
+    const p = el('div', 'cart-summary-text'); p.textContent = cart.cart_summary;
+    card.appendChild(p);
+  }
+
+  if (cart.swap_suggestions && cart.swap_suggestions.length > 0) {
+    const t = el('div', 'rec-section-title'); t.textContent = 'Suggested Swaps';
+    t.style.marginBottom = '8px';
+    const list = el('div', 'swap-list');
+    cart.swap_suggestions.forEach(s => {
+      const item = el('div', 'swap-item');
+      const top = el('div');
+      top.innerHTML = `<span class="swap-replace">${escHtml(s.replace)}</span><span class="swap-arrow">→</span><span class="swap-with">${escHtml(s.with || s.with_)}</span>`;
+      const reason = el('div', 'swap-reason'); reason.textContent = s.reason;
+      item.append(top, reason);
+      list.appendChild(item);
+    });
+    card.append(t, list);
+  }
+
+  const meta = el('div', 'meta');
+  meta.style.marginTop = '4px';
+  meta.textContent = 'Cart Analysis';
+  wrap.append(card, meta);
+  document.getElementById('messages').appendChild(wrap);
+  scrollBottom();
+}
+
+// ─────────────────────────────────────────────
+// Profile drawer
+// ─────────────────────────────────────────────
+function buildDrawer() {
+  const rGrid = document.getElementById('restrictions-grid');
+  DIETARY_OPTIONS.forEach(opt => {
+    const label = el('label', 'cb-label');
+    label.dataset.value = opt.value;
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = opt.value;
+    input.addEventListener('change', () => label.classList.toggle('checked', input.checked));
+    label.append(input, document.createTextNode(opt.label));
+    rGrid.appendChild(label);
+  });
+
+  const gGrid = document.getElementById('goals-grid');
+  GOAL_OPTIONS.forEach(opt => {
+    const label = el('label', 'cb-label');
+    label.dataset.value = opt.value;
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = opt.value;
+    input.addEventListener('change', () => label.classList.toggle('checked', input.checked));
+    label.append(input, document.createTextNode(opt.label));
+    gGrid.appendChild(label);
+  });
+}
+
+function restoreDrawerState() {
+  if (!profile) return;
+  (profile.dietary_restrictions || []).forEach(v => {
+    const label = document.querySelector(`#restrictions-grid [data-value="${v}"]`);
+    if (label) { label.querySelector('input').checked = true; label.classList.add('checked'); }
+  });
+  (profile.health_goals || []).forEach(v => {
+    const label = document.querySelector(`#goals-grid [data-value="${v}"]`);
+    if (label) { label.querySelector('input').checked = true; label.classList.add('checked'); }
+  });
+  if (profile.allergens) document.getElementById('allergens-input').value = profile.allergens.join(', ');
+  if (profile.daily_sodium_mg_target) document.getElementById('sodium-input').value = profile.daily_sodium_mg_target;
+  if (profile.daily_sugar_g_target) document.getElementById('sugar-input').value = profile.daily_sugar_g_target;
+}
+
+function saveProfile() {
+  const dietary = [...document.querySelectorAll('#restrictions-grid input:checked')].map(i => i.value);
+  const goals   = [...document.querySelectorAll('#goals-grid input:checked')].map(i => i.value);
+  const allergenRaw = document.getElementById('allergens-input').value;
+  const allergens = allergenRaw.split(',').map(s => s.trim()).filter(Boolean);
+  const sodium = parseInt(document.getElementById('sodium-input').value) || null;
+  const sugar  = parseInt(document.getElementById('sugar-input').value) || null;
+
+  profile = { dietary_restrictions: dietary, health_goals: goals, allergens, daily_sodium_mg_target: sodium, daily_sugar_g_target: sugar };
+  localStorage.setItem('nutritionProfile', JSON.stringify(profile));
+  updateProfileIndicator();
+  closeDrawer();
+}
+
+function buildProfilePayload() {
+  return profile || {};
+}
+
+function loadProfile() {
+  try { return JSON.parse(localStorage.getItem('nutritionProfile')) || {}; } catch { return {}; }
+}
+
+function updateProfileIndicator() {
+  const ind = document.getElementById('profile-indicator');
+  const hasProfile = profile && (
+    (profile.dietary_restrictions || []).length > 0 ||
+    (profile.allergens || []).length > 0 ||
+    (profile.health_goals || []).length > 0
+  );
+  ind.style.display = hasProfile ? 'flex' : 'none';
+  document.getElementById('profile-btn').classList.toggle('active', hasProfile);
+}
+
+function toggleDrawer() {
+  document.getElementById('drawer').classList.toggle('open');
+  document.getElementById('drawer-overlay').classList.toggle('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+function el(tag, className) {
+  const e = document.createElement(tag);
+  if (className) e.className = className;
+  return e;
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function goalLabel(v) {
+  return (GOAL_OPTIONS.find(o => o.value === v) || {label: v}).label;
+}
+</script>
+</body>
+</html>
