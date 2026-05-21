@@ -197,6 +197,127 @@ Eval results are logged back to Arize as evaluations attached to the original tr
 
 ---
 
+## Remote eval API mimic (`/evals/v1`)
+
+This agent exposes a customer-shaped evaluation service under `/evals/v1` that mimics the patterns Arize customers use in production. Each endpoint represents a bucket from the PM synthesis:
+
+| PM bucket | What it mimics here |
+|---|---|
+| 1 — Compliance / in-VPC | `REMOTE_EVAL_TOKEN` bearer gate; mTLS/IAM is an ingress concern |
+| 2 — Proprietary scorers | `response_style: "terse"` returns `score + label` only, no explanation |
+| 3 — Framework-integrated | Named evaluator routing — add a new entry to `evals/engine.py` `EVALUATORS` to plug in a DeepEval or Ragas scorer |
+| 4 — Competitive parity | Stable versioned paths (`/evals/v1/...`) with OpenAPI schema visible at `/docs` |
+| 5 — BYO flexibility | Generic `prediction + expected + extras` envelope; `X-Eval-Sample-Rate` and `X-Eval-Max-Retries` headers |
+
+### Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/evals/v1/evaluators` | List registered evaluators |
+| `POST` | `/evals/v1/evaluate` | Run a single named evaluator |
+| `POST` | `/evals/v1/batch` | Run multiple evaluators on one prediction |
+
+### Auth (bucket 1)
+
+Set `REMOTE_EVAL_TOKEN` in the environment to enable token gating:
+
+```bash
+REMOTE_EVAL_TOKEN=my-secret python server.py
+```
+
+Requests must then include one of:
+
+```
+Authorization: Bearer my-secret
+X-Remote-Eval-Token: my-secret
+```
+
+When `REMOTE_EVAL_TOKEN` is unset, all `/evals/v1/*` endpoints are open (dev default).
+
+### `GET /evals/v1/evaluators`
+
+```bash
+curl http://localhost:8000/evals/v1/evaluators
+# {"evaluators":["category_correctness","dietary_safety","evidence_groundedness","helpfulness"],
+#  "llm_judges":["evidence_groundedness","helpfulness"],
+#  "deterministic":["category_correctness","dietary_safety"]}
+```
+
+### `POST /evals/v1/evaluate`
+
+Single evaluator. Use `response_style: "terse"` for the proprietary-scorer shape (bucket 2):
+
+```bash
+curl -X POST http://localhost:8000/evals/v1/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "evaluator": "category_correctness",
+    "prediction": {"category": "MORE_OF"},
+    "expected": {"expected_category": "MORE_OF"},
+    "response_style": "terse"
+  }'
+# {"evaluator":"category_correctness","score":1.0,"label":"correct","confidence":null,"explanation":"","metadata":{}}
+```
+
+Full response (default):
+
+```bash
+curl -X POST http://localhost:8000/evals/v1/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "evaluator": "dietary_safety",
+    "prediction": {"personal_fit": {"dietary_conflicts": []}},
+    "expected": {"expected_dietary_conflicts": []}
+  }'
+# {"evaluator":"dietary_safety","score":1.0,"label":"pass","confidence":null,
+#  "explanation":"No expected dietary conflicts — trivially safe.","metadata":{}}
+```
+
+### `POST /evals/v1/batch`
+
+Multiple evaluators in one call. Deterministic-only is safe to run without Anthropic credits:
+
+```bash
+curl -X POST http://localhost:8000/evals/v1/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "evaluators": ["category_correctness", "dietary_safety"],
+    "prediction": {"category": "IN_MODERATION", "personal_fit": {"dietary_conflicts": []}},
+    "expected": {"expected_category": "IN_MODERATION", "expected_dietary_conflicts": []}
+  }'
+# {"results":[...], "evaluated":2, "skipped":0}
+```
+
+### Sample-rate and retries (bucket 5)
+
+```bash
+# Only execute ~50% of incoming eval requests (use for high-volume online evals)
+curl -X POST http://localhost:8000/evals/v1/evaluate \
+  -H "X-Eval-Sample-Rate: 0.5" \
+  -H "Content-Type: application/json" \
+  -d '{"evaluator":"category_correctness","prediction":{"category":"MORE_OF"},"expected":{"expected_category":"MORE_OF"}}'
+
+# Retry LLM-as-judge up to 3 times on transient failure
+curl -X POST http://localhost:8000/evals/v1/evaluate \
+  -H "X-Eval-Max-Retries: 3" \
+  -H "Content-Type: application/json" \
+  -d '{"evaluator":"evidence_groundedness","prediction":{...},"expected":{}}'
+```
+
+### Adding a new evaluator (framework integration, bucket 3)
+
+Register it in `evals/engine.py`:
+
+```python
+from my_deepeval_wrapper import my_custom_judge  # any callable: (prediction, expected) -> EvalResult
+
+EVALUATORS["my_custom_judge"] = my_custom_judge
+```
+
+It is then immediately available at `/evals/v1/evaluate` and `/evals/v1/batch` with no other changes needed.
+
+---
+
 ## Pipeline stages
 
 ```
