@@ -28,6 +28,7 @@ from nutrition_agent.schemas import (
     UserProfile,
 )
 from nutrition_agent.tracing import setup_tracing
+from evals.evals_router import router as evals_v1_router
 
 
 @asynccontextmanager
@@ -38,6 +39,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Grocery Nutrition Agent", lifespan=lifespan)
+app.include_router(evals_v1_router)
 
 _static_dir = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(_static_dir, exist_ok=True)

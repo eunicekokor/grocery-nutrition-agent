@@ -38,7 +38,8 @@ from nutrition_agent.schemas import (
     UserProfile,
 )
 from nutrition_agent.tracing import setup_tracing
-from evals.judges import run_all_judges, EvalResult
+from evals.engine import EVALUATORS, evaluate_all
+from evals.judges import EvalResult
 
 DATASET_PATH = Path(__file__).parent / "golden_dataset.jsonl"
 
@@ -209,12 +210,7 @@ def main() -> None:
     print(f"\nRunning evals on {len(rows)} rows…")
     print("=" * 70)
 
-    all_scores: dict[str, list[float]] = {
-        "category_correctness": [],
-        "dietary_safety": [],
-        "evidence_groundedness": [],
-        "helpfulness": [],
-    }
+    all_scores: dict[str, list[float]] = {name: [] for name in EVALUATORS}
     errors: list[str] = []
 
     for row in rows:
@@ -233,7 +229,7 @@ def main() -> None:
             )
 
             prediction = recommendation.model_dump(mode="json")
-            results = run_all_judges(prediction, row, llm_client)
+            results = evaluate_all(list(EVALUATORS), prediction, row, client=llm_client)
             print_row_result(row_id, url, results)
 
             for judge, result in results.items():
