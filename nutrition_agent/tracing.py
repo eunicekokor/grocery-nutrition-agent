@@ -65,12 +65,18 @@ ArizeEnv = Literal["dev", "prod"]
 # ---------------------------------------------------------------------------
 
 
-def setup_tracing(env: ArizeEnv | None = None) -> None:
+def setup_tracing(
+    env: ArizeEnv | None = None,
+    project_name: str = "grocery-nutrition-agent",
+) -> None:
     """
     Register Arize AX OTEL exporter and instrument the Anthropic client.
 
-    env: "dev" or "prod". When omitted, reads from the ARIZE_ENV environment
-         variable (default: "dev").
+    env:          "dev" or "prod". When omitted, reads from the ARIZE_ENV environment
+                  variable (default: "dev").
+    project_name: Arize project to send traces to. Override for eval runs to keep
+                  golden-dataset traces separate from live traffic
+                  (e.g. "grocery-nutrition-agent-evals").
 
     Credential resolution order for each environment:
       dev  -> ARIZE_SPACE_ID_DEV  / ARIZE_API_KEY_DEV  then ARIZE_SPACE_ID / ARIZE_API_KEY
@@ -106,7 +112,7 @@ def setup_tracing(env: ArizeEnv | None = None) -> None:
     register_kwargs: dict[str, Any] = dict(
         space_id=space_id,
         api_key=api_key,
-        project_name="grocery-nutrition-agent",
+        project_name=project_name,
         log_to_console=True,
         set_global_tracer_provider=False,
     )
