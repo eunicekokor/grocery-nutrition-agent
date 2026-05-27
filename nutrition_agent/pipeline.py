@@ -32,9 +32,11 @@ from .schemas import (
     RecommendationCategory,
     Severity,
     SwapSuggestion,
+    UserFacingError,
     UserProfile,
 )
 from .tools import (
+    ALLERGEN_KEYWORDS,
     ANALYZE_TOOLS,
     EXTRACT_TOOLS,
     RECOMMEND_TOOLS,
@@ -161,6 +163,12 @@ def stage_extract(client: anthropic.Anthropic, url: str) -> ProductFacts:
         )
     data = _parse_json_output(raw, "extract")
     data["source_url"] = url
+    if not data.get("name"):
+        raise UserFacingError(
+            "That URL doesn't look like a product page — no product name could be "
+            "found. Please paste a direct link to a specific grocery item "
+            "(e.g. a Target, Whole Foods, or Kroger product page)."
+        )
     return ProductFacts(**data)
 
 
@@ -237,6 +245,25 @@ def stage_personalize(
         )
         for w in compat.get("allergen_warnings", [])
     ]
+
+    # Whole-product allergen check — catches cases where the product itself IS
+    # the allergen (e.g. avocado, eggs, tree nuts) and the ingredient list is
+    # empty (common with login-walled pages like Instacart).
+    product_text = f"{facts.name} {facts.brand or ''}".lower()
+    already_warned = {w.allergen.lower() for w in warnings}
+    for allergen in profile.allergens:
+        allergen_lower = allergen.lower()
+        if allergen_lower in already_warned:
+            continue
+        known_keywords = ALLERGEN_KEYWORDS.get(allergen_lower, [allergen_lower])
+        if any(kw in product_text for kw in known_keywords) or allergen_lower in product_text:
+            warnings.append(
+                AllergenWarning(
+                    allergen=allergen,
+                    found_in=facts.name,
+                    certainty=Severity("high"),
+                )
+            )
 
     # Goal alignment scoring (deterministic heuristics)
     goal_alignment: dict[str, int] = {}

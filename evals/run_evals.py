@@ -104,15 +104,21 @@ def log_to_arize(
     row_id: str,
     request_id: str,
     results: dict[str, EvalResult],
+    project_name: str = "grocery-nutrition-agent-evals",
+    env: str | None = None,
 ) -> None:
     """
     Log eval results to Arize as evaluations on the trace span.
     Uses arize.pandas.logger if configured; falls back to a print.
+
+    Uses the same env-aware credential resolution as setup_tracing so eval
+    results land in the same space as the eval traces.
     """
-    space_id = os.environ.get("ARIZE_SPACE_ID")
-    api_key = os.environ.get("ARIZE_API_KEY")
+    resolved_env = (env or os.environ.get("ARIZE_ENV", "dev")).upper()
+    space_id = os.environ.get(f"ARIZE_SPACE_ID_{resolved_env}") or os.environ.get("ARIZE_SPACE_ID")
+    api_key = os.environ.get(f"ARIZE_API_KEY_{resolved_env}") or os.environ.get("ARIZE_API_KEY")
     if not space_id or not api_key:
-        print(f"    [arize] skipped — ARIZE_SPACE_ID/ARIZE_API_KEY not set")
+        print(f"    [arize] skipped — ARIZE_SPACE_ID_{resolved_env} / ARIZE_API_KEY_{resolved_env} not set")
         return
 
     try:
@@ -145,7 +151,7 @@ def log_to_arize(
         # The request_id ties back to the span's session.id attribute set in tracing.py
         response = arize_client.log(
             dataframe=df,
-            model_id="grocery-nutrition-agent",
+            model_id=project_name,
             model_version="1.0",
             environment=Environments.PRODUCTION,
             model_type=ModelTypes.GENERATIVE_LLM,
@@ -197,9 +203,17 @@ def main() -> None:
         default=None,
         help="Arize tracing environment. Defaults to ARIZE_ENV env var (fallback: dev).",
     )
+    parser.add_argument(
+        "--project",
+        default="grocery-nutrition-agent-evals",
+        help=(
+            "Arize project name to send eval traces to "
+            "(default: grocery-nutrition-agent-evals, keeping them separate from live traffic)."
+        ),
+    )
     args = parser.parse_args()
 
-    setup_tracing(env=args.env)
+    setup_tracing(env=args.env, project_name=args.project)
     rows = load_dataset(args.ids)
     if not rows:
         print("No rows found in dataset (check --ids filter).")
@@ -236,7 +250,13 @@ def main() -> None:
                 all_scores[judge].append(result.score)
 
             if not args.dry_run and recommendation.request_id:
-                log_to_arize(row_id, recommendation.request_id, results)
+                log_to_arize(
+                    row_id,
+                    recommendation.request_id,
+                    results,
+                    project_name=args.project,
+                    env=args.env,
+                )
 
         except Exception as exc:
             print(f"  ERROR: {exc}")

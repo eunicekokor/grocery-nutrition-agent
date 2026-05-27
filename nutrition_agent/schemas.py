@@ -12,6 +12,21 @@ from pydantic import BaseModel, Field
 
 
 # ---------------------------------------------------------------------------
+# User-facing pipeline errors
+# ---------------------------------------------------------------------------
+
+
+class UserFacingError(ValueError):
+    """
+    Raised when the pipeline detects a condition the user should fix
+    (e.g. submitting a non-product URL).
+
+    server.py catches this specifically and returns the message directly
+    to the UI instead of the generic fallback.
+    """
+
+
+# ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
 
