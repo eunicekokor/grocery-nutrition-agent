@@ -3,7 +3,7 @@ FastAPI router for the remote eval v1 API.
 
 Endpoints:
   GET  /evals/v1/evaluators   — list available evaluators
-  POST /evals/v1/evaluate     — run a single named evaluator
+  POST /evals/v1/evaluate     — run a single named evaluator (orchestrator format)
   POST /evals/v1/batch        — run several evaluators on one prediction
 
 Auth (bucket 1 — compliance/token gate):
@@ -22,6 +22,7 @@ Sample-rate + retries (bucket 5 — BYO flexibility):
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
@@ -31,7 +32,8 @@ from evals.engine import EVALUATORS, _LLM_JUDGES, evaluate_all, evaluate_one
 from evals.remote_models import (
     BatchEvalRequest,
     BatchEvalResponse,
-    EvalRequest,
+    EvalEntityRequest,
+    EvalEntityResponse,
     EvalResponse,
 )
 
@@ -130,29 +132,48 @@ async def list_evaluators(_: None = Depends(_check_auth)) -> dict:
     }
 
 
-@router.post("/evaluate", response_model=EvalResponse)
+@router.post("/evaluate", response_model=EvalEntityResponse)
 async def evaluate(
-    req: EvalRequest,
+    req: EvalEntityRequest,
     _: None = Depends(_check_auth),
     sample_rate: float = Depends(_parse_sample_rate),
     max_retries: int = Depends(_parse_max_retries),
-) -> EvalResponse:
+) -> EvalEntityResponse:
     """
-    Run a single named evaluator on a prediction.
+    Run a single named evaluator on any entity (span, trace, session, or example).
+
+    Request fields:
+      - evaluation_name: evaluator key (see GET /evals/v1/evaluators)
+      - entity_type: "span" | "trace" | "session" | "example" (echoed in response)
+      - entity_id: ID of the entity being evaluated
+      - output: raw model output string — JSON-parsed into prediction dict server-side
+      - expected: ground-truth dict for deterministic judges (optional for LLM judges)
 
     LLM-as-judge evaluators (evidence_groundedness, helpfulness) return
-    score=0.5 / label='skipped' when no Anthropic client is available
-    server-side — add ANTHROPIC_API_KEY to enable them.
+    label='skipped' when ANTHROPIC_API_KEY is not available server-side.
     """
-    if req.evaluator not in EVALUATORS:
+    if req.evaluation_name not in EVALUATORS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown evaluator: {req.evaluator!r}. Available: {sorted(EVALUATORS)}",
+            detail=f"Unknown evaluator: {req.evaluation_name!r}. Available: {sorted(EVALUATORS)}",
         )
 
+    # Parse output string into a prediction dict for judges
+    try:
+        prediction: dict[str, Any] = (
+            json.loads(req.output) if isinstance(req.output, str) else (req.output or {})
+        )
+        if not isinstance(prediction, dict):
+            prediction = {"output": req.output}
+    except (json.JSONDecodeError, TypeError):
+        prediction = {"output": req.output or ""}
+
+    # Make span/trace attributes available to judges that need them
+    prediction.setdefault("attributes", req.attributes)
+
     result = evaluate_one(
-        req.evaluator,
-        req.prediction,
+        req.evaluation_name,
+        prediction,
         req.expected,
         client=None,
         sample_rate=sample_rate,
@@ -160,14 +181,26 @@ async def evaluate(
     )
 
     if result is None:
-        return EvalResponse(
-            evaluator=req.evaluator,
-            score=0.5,
-            label="sampled_out",
-            explanation="Request sampled out per X-Eval-Sample-Rate.",
+        return EvalEntityResponse(
+            request_id=req.request_id,
+            entity_type=req.entity_type,
+            entity_id=req.entity_id,
+            results={"label": "sampled_out"},
         )
 
-    return _to_response(req.evaluator, result, req.response_style)
+    results: dict[str, Any] = {
+        "label": result.label,
+        "score": result.score,
+    }
+    if req.response_style != "terse" and result.explanation:
+        results["explanation"] = result.explanation
+
+    return EvalEntityResponse(
+        request_id=req.request_id,
+        entity_type=req.entity_type,
+        entity_id=req.entity_id,
+        results=results,
+    )
 
 
 @router.post("/batch", response_model=BatchEvalResponse)
