@@ -111,7 +111,7 @@ class ProductFacts(BaseModel):
     brand: str | None = Field(default=None, description="Brand name.")
     serving_size: str | None = Field(default=None, description="e.g. '1 cup (240g)'")
     servings_per_container: float | None = None
-    nutrition: dict[str, str] = Field(
+    nutrition: dict[str, str | None] = Field(
         default_factory=dict,
         description="Nutrient name -> value with unit, e.g. {'calories': '120', 'sodium': '480mg'}.",
     )
@@ -183,7 +183,7 @@ class PersonalFit(BaseModel):
         default_factory=list,
         description="Potential or confirmed allergen matches.",
     )
-    goal_alignment: dict[str, int] = Field(
+    goal_alignment: dict[str, float] = Field(
         default_factory=dict,
         description="Health goal -> alignment score 0-100.",
     )
