@@ -1,0 +1,38 @@
+{
+  "request_id": "probe-golden-021-allergen",
+  "evaluator": "allergen_recall",
+  "prediction": {
+    "category": "LESS_OF",
+    "headline": "🚫 LESS_OF: Fresh Avocado",
+    "rationale": "This product directly contains avocado, which is in your allergen list.",
+    "personal_fit": {
+      "dietary_conflicts": [],
+      "allergen_warnings": [
+        {
+          "allergen": "avocado",
+          "source": "product name",
+          "severity": "high"
+        }
+      ],
+      "goal_alignment": {},
+      "overall_fit_score": 5
+    },
+    "product_facts": {
+      "name": "Fresh Avocado",
+      "brand": "Organic Girl",
+      "ingredients": [],
+      "nutrition": {"calories": "234", "fat": "21g", "fiber": "10g"},
+      "claims": ["organic"],
+      "source_url": "https://www.instacart.com/products/21698-organic-avocado"
+    }
+  },
+  "attributes": {
+    "golden_id": "021",
+    "span_id": "probe-span-golden-021"
+  },
+  "expected": {
+    "profile": {
+      "allergens": ["avocado"]
+    }
+  }
+}

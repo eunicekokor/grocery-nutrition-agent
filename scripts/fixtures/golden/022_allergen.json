@@ -1,0 +1,38 @@
+{
+  "request_id": "probe-golden-022-allergen",
+  "evaluator": "allergen_recall",
+  "prediction": {
+    "category": "LESS_OF",
+    "headline": "🚫 LESS_OF: Justin's Almond Butter",
+    "rationale": "Contains almonds — a tree nut — which is in your allergen list.",
+    "personal_fit": {
+      "dietary_conflicts": [],
+      "allergen_warnings": [
+        {
+          "allergen": "tree nuts",
+          "source": "product name / ingredients",
+          "severity": "high"
+        }
+      ],
+      "goal_alignment": {},
+      "overall_fit_score": 5
+    },
+    "product_facts": {
+      "name": "Justin's Classic Almond Butter",
+      "brand": "Justin's",
+      "ingredients": ["dry roasted almonds", "palm oil", "sea salt"],
+      "nutrition": {"calories": "190", "fat": "18g", "protein": "7g"},
+      "claims": ["gluten-free", "non-GMO"],
+      "source_url": "https://www.target.com/p/justin-s-classic-almond-butter-16oz/-/A-52217671"
+    }
+  },
+  "attributes": {
+    "golden_id": "022",
+    "span_id": "probe-span-golden-022"
+  },
+  "expected": {
+    "profile": {
+      "allergens": ["tree nuts"]
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "request_id": "probe-helpfulness-strong",
+  "evaluator": "helpfulness",
+  "prediction": {
+    "category": "MORE_OF",
+    "headline": "✅ MORE OF: Chobani Plain Non-Fat Greek Yogurt",
+    "rationale": "Chobani Plain Non-Fat Greek Yogurt is an outstanding match for your muscle_gain, weight_loss, and low_sugar goals. Each serving delivers approximately 17g of protein with 0g fat and only 6g of naturally occurring sugar — no added sugar. Its high protein-to-calorie ratio (roughly 1g protein per 10 calories) makes it exceptionally efficient for muscle synthesis. The plain variety avoids the 15–20g of added sugar found in flavored Greek yogurts, keeping you well within your 20g daily sugar target. Minimal ingredient list: Grade A skim milk and live active cultures only — no thickeners, artificial flavors, or sweeteners.",
+    "product_facts": {
+      "name": "Chobani Plain Non-Fat Greek Yogurt",
+      "brand": "Chobani",
+      "ingredients": ["skim milk", "live and active cultures"],
+      "nutrition": {
+        "calories": "100",
+        "protein": "17g",
+        "fat": "0g",
+        "sugar": "6g",
+        "sodium": "55mg"
+      },
+      "claims": ["no artificial flavors", "no artificial sweeteners", "gluten-free"],
+      "source_url": "https://www.walmart.com/ip/Chobani-Plain-Non-Fat-Greek-Yogurt-32-oz/47881065"
+    }
+  },
+  "attributes": {
+    "golden_id": "013",
+    "span_kind": "CHAIN",
+    "span_id": "probe-span-helpfulness-strong",
+    "scenario": "specific_actionable_rationale_citing_facts"
+  }
+}

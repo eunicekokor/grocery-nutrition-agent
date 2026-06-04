@@ -3,7 +3,7 @@ FastAPI router for the remote eval v1 API.
 
 Endpoints:
   GET  /evals/v1/evaluators   — list available evaluators
-  POST /evals/v1/evaluate     — run a single named evaluator
+  POST /evals/v1/evaluate     — run a single named evaluator (orchestrator format)
   POST /evals/v1/batch        — run several evaluators on one prediction
 
 Auth (bucket 1 — compliance/token gate):
@@ -31,11 +31,28 @@ from evals.engine import EVALUATORS, _LLM_JUDGES, evaluate_all, evaluate_one
 from evals.remote_models import (
     BatchEvalRequest,
     BatchEvalResponse,
-    EvalRequest,
+    EvalEntityRequest,
+    EvalEntityResponse,
     EvalResponse,
 )
 
 router = APIRouter(prefix="/evals/v1", tags=["remote-evals"])
+
+# ---------------------------------------------------------------------------
+# LLM client — injected at app startup by server.py
+# ---------------------------------------------------------------------------
+
+_llm_client: Any = None
+
+
+def set_llm_client(client: Any) -> None:
+    """Register the Anthropic client for LLM-as-judge evaluators.
+
+    Called from server.py lifespan once ANTHROPIC_API_KEY is confirmed present.
+    When not called (key absent), LLM judges degrade to label='skipped'.
+    """
+    global _llm_client
+    _llm_client = client
 
 
 # ---------------------------------------------------------------------------
@@ -130,19 +147,23 @@ async def list_evaluators(_: None = Depends(_check_auth)) -> dict:
     }
 
 
-@router.post("/evaluate", response_model=EvalResponse)
+@router.post("/evaluate", response_model=EvalEntityResponse)
 async def evaluate(
-    req: EvalRequest,
+    req: EvalEntityRequest,
     _: None = Depends(_check_auth),
     sample_rate: float = Depends(_parse_sample_rate),
     max_retries: int = Depends(_parse_max_retries),
-) -> EvalResponse:
+) -> EvalEntityResponse:
     """
     Run a single named evaluator on a prediction.
 
+    Mirrors evaluate_one(evaluator, prediction, ...) — pass the structured
+    model output dict directly in `prediction`. Span/trace attributes can be
+    included via `attributes` and are merged into the prediction for judges
+    that need them.
+
     LLM-as-judge evaluators (evidence_groundedness, helpfulness) return
-    score=0.5 / label='skipped' when no Anthropic client is available
-    server-side — add ANTHROPIC_API_KEY to enable them.
+    label='skipped' when ANTHROPIC_API_KEY is not available server-side.
     """
     if req.evaluator not in EVALUATORS:
         raise HTTPException(
@@ -150,24 +171,29 @@ async def evaluate(
             detail=f"Unknown evaluator: {req.evaluator!r}. Available: {sorted(EVALUATORS)}",
         )
 
+    prediction = dict(req.prediction)
+    prediction.setdefault("attributes", req.attributes)
+
     result = evaluate_one(
         req.evaluator,
-        req.prediction,
+        prediction,
         req.expected,
-        client=None,
+        client=_llm_client,
         sample_rate=sample_rate,
         max_retries=max_retries,
     )
 
     if result is None:
-        return EvalResponse(
-            evaluator=req.evaluator,
-            score=0.5,
-            label="sampled_out",
-            explanation="Request sampled out per X-Eval-Sample-Rate.",
+        return EvalEntityResponse(
+            request_id=req.request_id,
+            results={"label": "sampled_out"},
         )
 
-    return _to_response(req.evaluator, result, req.response_style)
+    results: dict[str, Any] = {"label": result.label, "score": result.score}
+    if result.explanation:
+        results["explanation"] = result.explanation
+
+    return EvalEntityResponse(request_id=req.request_id, results=results)
 
 
 @router.post("/batch", response_model=BatchEvalResponse)
@@ -194,7 +220,7 @@ async def batch_evaluate(
         req.evaluators,
         req.prediction,
         req.expected,
-        client=None,
+        client=_llm_client,
         sample_rate=sample_rate,
         max_retries=max_retries,
     )

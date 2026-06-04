@@ -190,6 +190,7 @@ python evals/run_evals.py --no-llm-judges
 |---|---|---|
 | `category_correctness` | Deterministic | Exact match between predicted and expected category |
 | `dietary_safety` | Deterministic | Recall of expected dietary conflicts (safety-critical) |
+| `allergen_recall` | Deterministic | Recall of allergen warnings for every profile allergen present in product (no annotation needed) |
 | `evidence_groundedness` | LLM-as-judge | Each evidence item is traceable to the product facts (hallucination check) |
 | `helpfulness` | LLM-as-judge | Rationale quality rated 1–5 given the user profile and product |
 

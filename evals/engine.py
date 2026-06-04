@@ -17,6 +17,7 @@ from typing import Any
 
 from evals.judges import (
     EvalResult,
+    allergen_recall,
     category_correctness,
     dietary_safety,
     evidence_groundedness,
@@ -27,6 +28,7 @@ from evals.judges import (
 EVALUATORS: dict[str, Any] = {
     "category_correctness": category_correctness,
     "dietary_safety": dietary_safety,
+    "allergen_recall": allergen_recall,
     "evidence_groundedness": evidence_groundedness,
     "helpfulness": helpfulness,
 }

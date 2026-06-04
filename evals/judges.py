@@ -1,11 +1,13 @@
 """
 Eval judges for the Grocery Nutrition Agent.
 
-Four judges:
+Five judges:
   1. category_correctness  — deterministic exact match
   2. dietary_safety        — deterministic recall check (most critical for safety)
-  3. evidence_groundedness — LLM-as-judge: hallucination check on evidence items
-  4. helpfulness           — LLM-as-judge: 1-5 rating of rationale quality
+  3. allergen_recall       — deterministic: verifies all profile allergens present in
+                             product are covered by allergen_warnings
+  4. evidence_groundedness — LLM-as-judge: hallucination check on evidence items
+  5. helpfulness           — LLM-as-judge: 1-5 rating of rationale quality
 
 Each judge returns an EvalResult with a score (0.0-1.0) and an explanation.
 
@@ -20,6 +22,8 @@ import json
 import os
 from dataclasses import dataclass, field
 from typing import Any
+
+from nutrition_agent.tools import ALLERGEN_KEYWORDS
 
 
 @dataclass
@@ -127,7 +131,90 @@ def dietary_safety(
 
 
 # ---------------------------------------------------------------------------
-# Judge 3: evidence_groundedness (LLM-as-judge)
+# Judge 3: allergen_recall (deterministic)
+# ---------------------------------------------------------------------------
+
+
+def allergen_recall(
+    prediction: dict,
+    expected: dict,
+) -> EvalResult:
+    """
+    Verify that the agent raised an allergen_warning for every allergen in the
+    user profile that actually appears in the product (name, brand, ingredients).
+
+    Unlike dietary_safety, this judge derives expectations directly from
+    prediction.product_facts + profile — no ground-truth annotation required.
+
+    Score: recall fraction (warnings caught / expected warnings present in product).
+    Score = 1.0 if no profile allergens are present in the product at all.
+    Score = 0.5 / label = "insufficient_data" when product_facts is missing.
+    """
+    profile = expected.get("profile", {})
+    user_allergens = profile.get("allergens", [])
+
+    if not user_allergens:
+        return EvalResult(
+            score=1.0,
+            label="pass",
+            explanation="No allergens in profile — nothing to check.",
+        )
+
+    product_facts = prediction.get("product_facts") or {}
+
+    if not product_facts or not product_facts.get("name"):
+        return EvalResult(
+            score=0.5,
+            label="insufficient_data",
+            explanation="product_facts missing or empty — cannot verify allergen coverage.",
+        )
+
+    product_text = " ".join(
+        [
+            product_facts.get("name", ""),
+            product_facts.get("brand") or "",
+            *product_facts.get("ingredients", []),
+        ]
+    ).lower()
+
+    # Determine which profile allergens actually appear in the product.
+    expected_warnings: list[str] = []
+    for allergen in user_allergens:
+        keywords = ALLERGEN_KEYWORDS.get(allergen.lower(), [allergen.lower()])
+        if any(kw in product_text for kw in keywords) or allergen.lower() in product_text:
+            expected_warnings.append(allergen)
+
+    if not expected_warnings:
+        return EvalResult(
+            score=1.0,
+            label="pass",
+            explanation="No profile allergens detected in product — no warnings expected.",
+        )
+
+    # Check which expected warnings the agent actually raised.
+    raised: set[str] = {
+        w.get("allergen", "").lower()
+        for w in (prediction.get("personal_fit") or {}).get("allergen_warnings", [])
+    }
+    caught = sum(1 for a in expected_warnings if a.lower() in raised)
+    recall = caught / len(expected_warnings)
+
+    label = "pass" if recall == 1.0 else ("partial" if recall > 0 else "fail")
+    missed = [a for a in expected_warnings if a.lower() not in raised]
+    explanation = (
+        f"Caught {caught}/{len(expected_warnings)} expected allergen warnings."
+        + (f" Missed: {', '.join(missed)}" if missed else "")
+    )
+    return EvalResult(
+        score=recall,
+        label=label,
+        explanation=explanation,
+        metadata={"caught": caught, "total": len(expected_warnings), "missed": missed},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Judge 4: evidence_groundedness (LLM-as-judge)
 # ---------------------------------------------------------------------------
 
 GROUNDEDNESS_PROMPT = """\
@@ -297,6 +384,7 @@ def run_all_judges(
     return {
         "category_correctness": category_correctness(prediction, expected),
         "dietary_safety": dietary_safety(prediction, expected),
+        "allergen_recall": allergen_recall(prediction, expected),
         "evidence_groundedness": evidence_groundedness(prediction, expected, client),
         "helpfulness": helpfulness(prediction, expected, client),
     }

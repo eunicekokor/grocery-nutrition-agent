@@ -1,0 +1,11 @@
+{
+  "request_id": "probe-unknown-eval",
+  "evaluator": "not_a_real_judge",
+  "prediction": {
+    "category": "MORE_OF"
+  },
+  "attributes": {
+    "scenario": "invalid_evaluator_name",
+    "span_id": "probe-span-err"
+  }
+}

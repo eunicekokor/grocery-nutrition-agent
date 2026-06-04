@@ -31,7 +31,7 @@ from nutrition_agent.schemas import (
 )
 from nutrition_agent.schemas import UserFacingError
 from nutrition_agent.tracing import setup_tracing
-from evals.evals_router import router as evals_v1_router
+from evals.evals_router import router as evals_v1_router, set_llm_client
 from evals.engine import EVALUATORS, evaluate_all
 
 
@@ -39,6 +39,14 @@ from evals.engine import EVALUATORS, evaluate_all
 async def lifespan(app: FastAPI):
     env = os.environ.get("ARIZE_ENV", "dev").lower()
     setup_tracing(env=env)  # type: ignore[arg-type]
+
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        import anthropic
+        set_llm_client(anthropic.Anthropic())
+        logger.info("[evals] Anthropic client registered — LLM judges enabled")
+    else:
+        logger.info("[evals] ANTHROPIC_API_KEY not set — LLM judges will return label='skipped'")
+
     yield
 
 
