@@ -16,10 +16,12 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(levelname)s:     %(name)s: %(message)s"
+)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from nutrition_agent.pipeline import run_cart_pipeline, run_pipeline
 from nutrition_agent.schemas import (
@@ -42,10 +44,13 @@ async def lifespan(app: FastAPI):
 
     if os.environ.get("ANTHROPIC_API_KEY"):
         import anthropic
+
         set_llm_client(anthropic.Anthropic())
         logger.info("[evals] Anthropic client registered — LLM judges enabled")
     else:
-        logger.info("[evals] ANTHROPIC_API_KEY not set — LLM judges will return label='skipped'")
+        logger.info(
+            "[evals] ANTHROPIC_API_KEY not set — LLM judges will return label='skipped'"
+        )
 
     yield
 
@@ -72,8 +77,30 @@ class ProfilePayload(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    url: str
+    url: str = ""
     profile: ProfilePayload | None = None
+    # Arize experiment envelope fields — ignored after unwrapping
+    arize_metadata: dict | None = None
+    input: dict | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _unwrap_arize_envelope(cls, values: dict) -> dict:
+        """Unwrap the Arize experiment envelope format.
+
+        Arize sends experiment inputs as:
+          {"arize_metadata": {...}, "input": {"body": {"url": ..., "profile": ...}}}
+
+        This validator promotes input.body fields to the top level so the rest
+        of the model validation proceeds normally.
+        """
+        nested = values.get("input") or {}
+        body = nested.get("body") or {}
+        if body:
+            values.setdefault("url", body.get("url", ""))
+            if "profile" not in values and "profile" in body:
+                values["profile"] = body["profile"]
+        return values
 
 
 class CartRequest(BaseModel):
