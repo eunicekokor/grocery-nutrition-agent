@@ -89,17 +89,16 @@ class ChatRequest(BaseModel):
         """Unwrap the Arize experiment envelope format.
 
         Arize sends experiment inputs as:
-          {"arize_metadata": {...}, "input": {"body": {"url": ..., "profile": ...}}}
+          {"arize_metadata": {...}, "input": {"url": ..., "profile": ...}}
 
         This validator promotes input.body fields to the top level so the rest
         of the model validation proceeds normally.
         """
         nested = values.get("input") or {}
-        body = nested.get("body") or {}
-        if body:
-            values.setdefault("url", body.get("url", ""))
-            if "profile" not in values and "profile" in body:
-                values["profile"] = body["profile"]
+        if nested:
+            values.setdefault("url", nested.get("url", ""))
+            if "profile" not in values and "profile" in nested:
+                values["profile"] = nested["profile"]
         return values
 
 
