@@ -1,0 +1,42 @@
+{
+  "request_id": "probe-001-pass",
+  "evaluator": "category_correctness",
+  "prediction": {
+    "category": "MORE_OF",
+    "headline": "✅ MORE OF: 365 Everyday Value Organic Rolled Oats",
+    "rationale": "Plain rolled oats are a whole food with excellent fiber content and no added sugar, directly supporting high_fiber and heart_health goals. Minimal ingredients, low sodium, and vegan/gluten-free compatible.",
+    "personal_fit": {
+      "dietary_conflicts": [],
+      "allergen_warnings": [
+        {
+          "allergen": "wheat",
+          "found_in": "oats (may contain wheat due to cross-contamination)",
+          "severity": "possible"
+        }
+      ],
+      "goal_alignment": {
+        "high_fiber": 95.0,
+        "heart_health": 90.0
+      },
+      "overall_fit_score": 88
+    },
+    "product_facts": {
+      "name": "365 Everyday Value Organic Rolled Oats",
+      "brand": "365 Everyday Value",
+      "ingredients": ["organic rolled oats"],
+      "nutrition": {
+        "calories": "150",
+        "fiber": "4g",
+        "sodium": "0mg",
+        "sugar": "1g"
+      },
+      "claims": ["organic", "vegan", "gluten-free"],
+      "source_url": "https://www.wholefoodsmarket.com/product/365-everyday-value-organic-rolled-oats-32-oz/B07B3WV5WL"
+    }
+  },
+  "attributes": {
+    "golden_id": "001",
+    "span_kind": "CHAIN",
+    "span_id": "probe-span-001"
+  }
+}

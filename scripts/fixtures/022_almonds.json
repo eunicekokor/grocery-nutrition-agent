@@ -1,0 +1,42 @@
+{
+  "request_id": "probe-022-almonds",
+  "evaluator": "allergen_recall",
+  "prediction": {
+    "category": "IN_MODERATION",
+    "headline": "⚠️ IN MODERATION: Great Value Whole Almonds",
+    "rationale": "Almonds are a tree nut — the user has a tree nut allergy. While almonds are excellent for heart health, they must be avoided entirely for this profile. The allergen warning should be raised.",
+    "personal_fit": {
+      "dietary_conflicts": [],
+      "allergen_warnings": [
+        {
+          "allergen": "tree nuts",
+          "found_in": "almonds",
+          "severity": "confirmed"
+        }
+      ],
+      "goal_alignment": {
+        "heart_health": 85.0
+      },
+      "overall_fit_score": 10
+    },
+    "product_facts": {
+      "name": "Great Value Whole Almonds",
+      "brand": "Great Value",
+      "ingredients": ["almonds"],
+      "nutrition": {
+        "calories": "170",
+        "fat": "15g",
+        "protein": "6g",
+        "sodium": "0mg"
+      },
+      "claims": ["no added salt", "gluten-free"],
+      "source_url": "https://www.walmart.com/ip/Great-Value-Whole-Almonds-16-oz/11262949"
+    }
+  },
+  "attributes": {
+    "golden_id": "022",
+    "span_kind": "CHAIN",
+    "span_id": "probe-span-022",
+    "scenario": "product_is_tree_nut_allergen_keyword"
+  }
+}

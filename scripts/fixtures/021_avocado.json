@@ -1,0 +1,37 @@
+{
+  "request_id": "probe-021-avocado",
+  "evaluator": "allergen_recall",
+  "prediction": {
+    "category": "LESS_OF",
+    "headline": "🚫 LESS OF: Hass Avocado",
+    "rationale": "Avocado is the product itself — the user has listed avocado as an allergen. Despite excellent nutritional properties for heart health and weight loss, this product is entirely contraindicated.",
+    "personal_fit": {
+      "dietary_conflicts": [],
+      "allergen_warnings": [],
+      "goal_alignment": {
+        "heart_health": 85.0,
+        "weight_loss": 70.0
+      },
+      "overall_fit_score": 5
+    },
+    "product_facts": {
+      "name": "Hass Avocado Large Each",
+      "brand": null,
+      "ingredients": [],
+      "nutrition": {
+        "calories": "234",
+        "fat": "21g",
+        "fiber": "10g",
+        "sodium": "11mg"
+      },
+      "claims": ["fresh", "produce"],
+      "source_url": "https://www.instacart.com/products/18533406-hass-avocado-large-each"
+    }
+  },
+  "attributes": {
+    "golden_id": "021",
+    "span_kind": "CHAIN",
+    "span_id": "probe-span-021",
+    "scenario": "allergen_in_product_name_only"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "request_id": "probe-minimal",
+  "evaluator": "category_correctness",
+  "prediction": {
+    "category": "MORE_OF"
+  }
+}
