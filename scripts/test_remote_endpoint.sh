@@ -57,20 +57,38 @@
 #   export SPACE_ID=1              # default 1
 #   export GRPC_TARGET=localhost:6018
 #
-#   ./scripts/test_remote_endpoint.sh --list          # print available case ids
-#   ./scripts/test_remote_endpoint.sh 001_pass        # run a specific case
-#   ./scripts/test_remote_endpoint.sh 021_avocado
-#   ./scripts/test_remote_endpoint.sh unknown_eval    # expect HTTP 400 in RPC response
+#   # Reference-free LLM judges (need ANTHROPIC_API_KEY on the server):
+#   ./scripts/test_remote_endpoint.sh groundedness_basic
+#   ./scripts/test_remote_endpoint.sh --mode reference_free helpfulness_weak
+#   ./scripts/test_remote_endpoint.sh --list                          # reference_free cases
+#
+#   # Golden / reference-based judges (need expected ground truth in the fixture):
+#   ./scripts/test_remote_endpoint.sh --mode golden 001_category
+#   ./scripts/test_remote_endpoint.sh --mode golden 021_allergen
+#   ./scripts/test_remote_endpoint.sh --mode golden --list
+#
+#   # Mode-agnostic utility cases (root fixtures/ directory):
+#   ./scripts/test_remote_endpoint.sh --mode root unknown_eval
+#   ./scripts/test_remote_endpoint.sh --mode root minimal
 #
 # ---------------------------------------------------------------------------
 # Available cases (see scripts/fixtures/README.md for full descriptions)
 # ---------------------------------------------------------------------------
-#   001_pass       Golden row 001 (oats)    — category_correctness, rich prediction
-#   003_halal      Golden row 003 (SPAM)    — dietary_safety, halal conflict payload
-#   021_avocado    Golden row 021 (avocado) — allergen_recall, name-only allergen
-#   022_almonds    Golden row 022 (almonds) — allergen_recall, tree nut keyword match
-#   unknown_eval   —                        — invalid evaluator, expect HTTP 400
-#   minimal        —                        — smallest valid payload (required fields only)
+# mode=reference_free (scripts/fixtures/reference_free/):
+#   groundedness_basic         — evidence_groundedness, all claims supported
+#   groundedness_hallucination — evidence_groundedness, claims contradict facts
+#   helpfulness_strong         — helpfulness, rich specific rationale
+#   helpfulness_weak           — helpfulness, vague boilerplate rationale
+#
+# mode=golden (scripts/fixtures/golden/):
+#   001_category   — category_correctness + expected_category: MORE_OF
+#   003_dietary    — dietary_safety + expected halal conflict
+#   021_allergen   — allergen_recall + expected allergen: avocado
+#   022_allergen   — allergen_recall + expected allergen: tree nuts
+#
+# mode=root (scripts/fixtures/):
+#   unknown_eval   — invalid evaluator, expect HTTP 400
+#   minimal        — smallest valid payload (required fields only)
 # ---------------------------------------------------------------------------
 
 set -euo pipefail
@@ -80,27 +98,69 @@ FIXTURES_DIR="${SCRIPT_DIR}/fixtures"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # ---------------------------------------------------------------------------
-# --list mode: print available case ids and exit
+# Argument parsing: [--mode <reference_free|golden|root>] [--list] [<case_id>]
 # ---------------------------------------------------------------------------
-if [[ "${1:-}" == "--list" ]]; then
-    echo "Available cases (scripts/fixtures/):"
-    for f in "${FIXTURES_DIR}"/*.json; do
-        [[ -f "$f" ]] && printf "  %s\n" "$(basename "$f" .json)"
+MODE="reference_free"   # default
+DO_LIST=0
+CASE_ID=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --mode)
+            shift
+            MODE="${1:?--mode requires a value: reference_free, golden, or root}"
+            if [[ "${MODE}" != "reference_free" && "${MODE}" != "golden" && "${MODE}" != "root" ]]; then
+                echo "ERROR: --mode must be one of: reference_free, golden, root" >&2
+                exit 1
+            fi
+            ;;
+        --list)
+            DO_LIST=1
+            ;;
+        *)
+            CASE_ID="$1"
+            ;;
+    esac
+    shift
+done
+
+# Resolve the fixture directory for the selected mode.
+if [[ "${MODE}" == "root" ]]; then
+    MODE_DIR="${FIXTURES_DIR}"
+else
+    MODE_DIR="${FIXTURES_DIR}/${MODE}"
+fi
+
+# ---------------------------------------------------------------------------
+# --list: print available case ids for the selected mode and exit
+# ---------------------------------------------------------------------------
+if [[ "${DO_LIST}" == "1" ]]; then
+    echo "Available cases for --mode ${MODE} (${MODE_DIR}/):"
+    found=0
+    for f in "${MODE_DIR}"/*.json; do
+        [[ -f "$f" ]] && printf "  %s\n" "$(basename "$f" .json)" && found=1
     done
+    [[ "$found" == "0" ]] && echo "  (none)"
     echo
-    echo "Usage: $0 <case_id>"
+    echo "Other modes: reference_free | golden | root"
+    echo "Usage:  $0 [--mode <mode>] <case_id>"
+    echo "        $0 [--mode <mode>] --list"
     exit 0
 fi
 
 # ---------------------------------------------------------------------------
-# Require CASE_ID argument
+# Require CASE_ID
 # ---------------------------------------------------------------------------
-CASE_ID="${1:?Usage: $0 <case_id>  (run '$0 --list' to see available cases)}"
+if [[ -z "${CASE_ID}" ]]; then
+    echo "Usage: $0 [--mode reference_free|golden|root] <case_id>" >&2
+    echo "       $0 [--mode reference_free|golden|root] --list" >&2
+    exit 1
+fi
 
-FIXTURE_FILE="${FIXTURES_DIR}/${CASE_ID}.json"
+FIXTURE_FILE="${MODE_DIR}/${CASE_ID}.json"
 if [[ ! -f "${FIXTURE_FILE}" ]]; then
     echo "ERROR: fixture not found: ${FIXTURE_FILE}" >&2
-    echo "       Run '$0 --list' to see available cases." >&2
+    echo "       Run '$0 --mode ${MODE} --list' to see available cases." >&2
     exit 1
 fi
 
@@ -200,6 +260,7 @@ build_grpc_payload() {
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+echo "==> Mode:     ${MODE}"
 echo "==> Case:     ${CASE_ID}"
 echo "==> Fixture:  ${FIXTURE_FILE}"
 echo "==> Target:   ${GRPC_TARGET}"

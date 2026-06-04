@@ -1,0 +1,42 @@
+{
+  "request_id": "probe-groundedness-hallucination",
+  "evaluator": "evidence_groundedness",
+  "prediction": {
+    "category": "MORE_OF",
+    "headline": "✅ MORE OF: SPAM Classic Canned Meat",
+    "rationale": "This is a fantastic low-sodium option packed with omega-3 fatty acids.",
+    "evidence": [
+      {
+        "claim": "Contains only 50mg sodium per serving — ideal for low-sodium goals",
+        "source": "product_facts.nutrition.sodium"
+      },
+      {
+        "claim": "Rich in omega-3 fatty acids supporting heart health",
+        "source": "product_facts.ingredients"
+      },
+      {
+        "claim": "Certified organic and non-GMO",
+        "source": "product_facts.claims"
+      }
+    ],
+    "product_facts": {
+      "name": "SPAM Classic Canned Meat",
+      "brand": "Hormel",
+      "ingredients": ["pork with ham", "salt", "water", "modified potato starch", "sugar", "sodium nitrite"],
+      "nutrition": {
+        "calories": "180",
+        "sodium": "1080mg",
+        "protein": "7g",
+        "fat": "15g"
+      },
+      "claims": [],
+      "source_url": "https://www.walmart.com/ip/SPAM-Classic-Canned-Meat-12-oz/10534892"
+    }
+  },
+  "attributes": {
+    "golden_id": "003",
+    "span_kind": "CHAIN",
+    "span_id": "probe-span-groundedness-hallucination",
+    "scenario": "all_evidence_contradicts_product_facts"
+  }
+}

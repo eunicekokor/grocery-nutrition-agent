@@ -1,0 +1,38 @@
+{
+  "request_id": "probe-golden-003-dietary",
+  "evaluator": "dietary_safety",
+  "prediction": {
+    "category": "LESS_OF",
+    "headline": "🚫 LESS OF: SPAM Classic Canned Meat",
+    "rationale": "SPAM contains pork and very high sodium.",
+    "personal_fit": {
+      "dietary_conflicts": [
+        {
+          "restriction": "halal",
+          "ingredient": "pork",
+          "reason": "SPAM contains pork shoulder and ham — not halal-certified"
+        }
+      ],
+      "allergen_warnings": [],
+      "goal_alignment": {"heart_health": 10.0, "low_sodium": 5.0},
+      "overall_fit_score": 8
+    },
+    "product_facts": {
+      "name": "SPAM Classic Canned Meat",
+      "brand": "Hormel",
+      "ingredients": ["pork with ham", "salt", "water", "modified potato starch", "sugar", "sodium nitrite"],
+      "nutrition": {"calories": "180", "sodium": "1080mg", "protein": "7g"},
+      "claims": [],
+      "source_url": "https://www.walmart.com/ip/SPAM-Classic-Canned-Meat-12-oz/10534892"
+    }
+  },
+  "attributes": {
+    "golden_id": "003",
+    "span_id": "probe-span-golden-003"
+  },
+  "expected": {
+    "expected_dietary_conflicts": [
+      {"restriction": "halal", "ingredient": "pork"}
+    ]
+  }
+}

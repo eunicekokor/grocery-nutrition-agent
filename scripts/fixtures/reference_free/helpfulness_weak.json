@@ -1,0 +1,28 @@
+{
+  "request_id": "probe-helpfulness-weak",
+  "evaluator": "helpfulness",
+  "prediction": {
+    "category": "LESS_OF",
+    "headline": "🚫 LESS OF: Coca-Cola Classic",
+    "rationale": "This product is not great for your health goals. You should try to eat healthier foods and avoid drinks like this. It has too much sugar and is not good for you. Consider choosing something better for your diet instead.",
+    "product_facts": {
+      "name": "Coca-Cola Classic Soda",
+      "brand": "Coca-Cola",
+      "ingredients": ["carbonated water", "high fructose corn syrup", "caramel color", "phosphoric acid", "natural flavors", "caffeine"],
+      "nutrition": {
+        "calories": "240",
+        "sugar": "65g",
+        "sodium": "75mg",
+        "fat": "0g"
+      },
+      "claims": [],
+      "source_url": "https://www.target.com/p/coca-cola-classic-soda-2-liter/-/A-11053474"
+    }
+  },
+  "attributes": {
+    "golden_id": "008",
+    "span_kind": "CHAIN",
+    "span_id": "probe-span-helpfulness-weak",
+    "scenario": "vague_generic_rationale_no_facts_cited"
+  }
+}

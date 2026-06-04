@@ -38,6 +38,22 @@ from evals.remote_models import (
 
 router = APIRouter(prefix="/evals/v1", tags=["remote-evals"])
 
+# ---------------------------------------------------------------------------
+# LLM client — injected at app startup by server.py
+# ---------------------------------------------------------------------------
+
+_llm_client: Any = None
+
+
+def set_llm_client(client: Any) -> None:
+    """Register the Anthropic client for LLM-as-judge evaluators.
+
+    Called from server.py lifespan once ANTHROPIC_API_KEY is confirmed present.
+    When not called (key absent), LLM judges degrade to label='skipped'.
+    """
+    global _llm_client
+    _llm_client = client
+
 
 # ---------------------------------------------------------------------------
 # Auth dependency
@@ -161,8 +177,8 @@ async def evaluate(
     result = evaluate_one(
         req.evaluator,
         prediction,
-        {},
-        client=None,
+        req.expected,
+        client=_llm_client,
         sample_rate=sample_rate,
         max_retries=max_retries,
     )
@@ -204,7 +220,7 @@ async def batch_evaluate(
         req.evaluators,
         req.prediction,
         req.expected,
-        client=None,
+        client=_llm_client,
         sample_rate=sample_rate,
         max_retries=max_retries,
     )

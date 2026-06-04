@@ -29,6 +29,15 @@ class EvalEntityRequest(BaseModel):
         default_factory=dict,
         description="Span/trace attributes merged into the prediction dict for judge access.",
     )
+    expected: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Ground-truth for reference-based (golden) judges. "
+            "Omit for reference-free judges (evidence_groundedness, helpfulness). "
+            "Examples: {'expected_category': 'MORE_OF'} for category_correctness, "
+            "{'profile': {'allergens': ['avocado']}} for allergen_recall."
+        ),
+    )
 
 
 class EvalEntityResponse(BaseModel):
