@@ -9,3 +9,6 @@ node_modules
 .agents/
 .claude/
 skills-lock.json
+# Added by Braintrust Wizard
+.env.braintrust
+.braintrust.json

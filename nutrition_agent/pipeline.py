@@ -17,6 +17,13 @@ import json
 import uuid
 from typing import Any
 
+# Braintrust tracing: init the logger (project "Grocery") and enable
+# auto-instrumentation before any AI library is imported or a client created.
+import braintrust
+
+braintrust.init_logger(project="Grocery")
+braintrust.auto_instrument()
+
 import anthropic
 
 from .prompts import ANALYZE_SYSTEM, CART_SYSTEM, EXTRACT_SYSTEM, RECOMMEND_SYSTEM

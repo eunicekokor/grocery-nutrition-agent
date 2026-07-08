@@ -1,0 +1,30 @@
+# Not needed by the deployed Python function (server.py) — kept out so Vercel
+# doesn't bundle them into the Python Function and blow the size limit.
+# https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled
+node_modules
+package.json
+package-lock.json
+requirements-dev.txt
+
+.git
+.github
+.agents
+.claude
+.cursor
+.arize-tmp-traces
+__pycache__
+*.pyc
+
+.env
+.env.braintrust
+.env.example
+.braintrust.json
+
+scripts
+evals/run_evals.py
+evals/run_experiment.py
+evals/benchmark_results.md
+
+AGENTS.md
+README.md
+skills-lock.json

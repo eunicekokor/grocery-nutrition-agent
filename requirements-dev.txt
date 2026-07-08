@@ -1,0 +1,6 @@
+# Extra dependencies for local-only tooling (evals/run_evals.py, evals/run_experiment.py).
+# Not needed by server.py at runtime — kept out of requirements.txt so Vercel
+# doesn't bundle the full arize SDK + pandas (~300MB) into the deployed function.
+-r requirements.txt
+arize>=7.0.0
+pandas>=2.0.0

@@ -49,6 +49,13 @@ grocery-nutrition-agent/
 pip install -r requirements.txt
 ```
 
+For local eval tooling (`evals/run_evals.py`, `evals/run_experiment.py`), which need
+the full `arize` SDK and `pandas`, also install the dev extras:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
 ### 2. Configure environment variables
 
 Copy `.env.example` to `.env` and fill in your keys:
