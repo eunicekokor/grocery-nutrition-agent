@@ -1,5 +1,4 @@
 anthropic>=0.40.0
-braintrust>=0.26.0
 arize-otel>=0.11.0
 openinference-instrumentation-anthropic>=0.1.0
 openinference-semantic-conventions>=0.1.0
